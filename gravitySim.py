@@ -1,13 +1,14 @@
 from cmu_graphics import *
 import math
+import pyautogui
 
 # Constants
-gravitationalConstant = 0.5
+gravitationalConstant = 10
 mass = 1
 heldParticles = []
 particles = []
-app.height = 800
-app.width = 800
+app.width, app.height = pyautogui.size()
+app.height -= 55
 isMouseDown = False
 xMouse = 0
 yMouse = 0
