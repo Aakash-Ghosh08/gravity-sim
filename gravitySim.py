@@ -3,7 +3,7 @@ import math
 import pyautogui
 
 # Constants
-gravitationalConstant = 10
+gravitationalConstant = 20
 mass = 1
 heldParticles = []
 particles = []
@@ -30,7 +30,7 @@ class Particle:
         totalForceX, totalForceY = 0, 0
         
         for particle in particles:
-            if particle is not self:
+            if particle is not self and distance(self.body.centerX, self.body.centerY,particle.body.centerX, particle.body.centerY) > .5:
                 dx = particle.body.centerX - self.body.centerX
                 dy = particle.body.centerY - self.body.centerY
                 r = math.sqrt(dx ** 2 + dy ** 2)
@@ -66,6 +66,14 @@ class Particle:
                 particle.body.centerX -= offset * math.cos(angle)
                 particle.body.centerY += offset * math.sin(angle)
                 
+                damping = .85
+                relativeVelocityX = self.velocityX - particle.velocityX
+                relativeVelocityY = self.velocityY - particle.velocityY
+                self.velocityX -= damping * relativeVelocityX
+                self.velocityY -= damping * relativeVelocityY
+                particle.velocityX += damping * relativeVelocityX
+                particle.velocityY += damping * relativeVelocityY
+                
 def onMouseDrag(mouseX, mouseY):
     global xMouse,yMouse,isMouseDown
     xMouse,yMouse = mouseX,mouseY
@@ -97,12 +105,21 @@ def onStep():
     
     if(isMouseDown):
         newParticle = Particle(xMouse, yMouse)
-        heldParticles.append(newParticle)
-
+        hitsParticle = False
         for particle in heldParticles:
-            angle = math.radians(angleTo(particle.body.centerX, particle.body.centerY, xMouse,yMouse))
-            distanceFromMouse = distance(particle.body.centerX, particle.body.centerY, xMouse,yMouse)/10
-            particle.velocityX = math.cos(angle) * distanceFromMouse
-            particle.velocityY = math.sin(angle) * distanceFromMouse
+            if(newParticle.body.hitsShape(particle.body)):
+                hitsParticle = True
+                
+        if(not hitsParticle):
+            heldParticles.append(newParticle)
+
+            for particle in heldParticles:
+                angle = math.radians(angleTo(particle.body.centerX, particle.body.centerY, xMouse,yMouse))
+                distanceFromMouse = distance(particle.body.centerX, particle.body.centerY, xMouse,yMouse)/10
+                particle.velocityX = math.cos(angle) * distanceFromMouse
+                particle.velocityY = math.sin(angle) * distanceFromMouse
+        else:
+            newParticle.body.visible = False
+            del newParticle
 
 cmu_graphics.run()
