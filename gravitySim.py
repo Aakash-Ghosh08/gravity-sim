@@ -21,31 +21,31 @@ def angleTo(x1, y1, x2, y2):
 
 class Particle:
     def __init__(self, x, y):
+        global mass
         self.velocityX = 0
         self.velocityY = 0
+        self.mass = mass
         self.body = Circle(x, y, 2, fill='orange')
 
-    def calculateForce(self, particles):
-        global gravitationalConstant, mass
+    def calculateForce(self, particles, dt):
+        global gravitationalConstant
         totalForceX, totalForceY = 0, 0
         
         for particle in particles:
-            if particle is not self and distance(self.body.centerX, self.body.centerY,particle.body.centerX, particle.body.centerY) > .5:
+            if particle is not self:
                 dx = particle.body.centerX - self.body.centerX
                 dy = particle.body.centerY - self.body.centerY
                 r = math.sqrt(dx ** 2 + dy ** 2)
                 
-                if(not r == 0):
-                    F = (gravitationalConstant * mass * mass) / (r ** 2)
-
-                if r > 0:
+                if r > 0.5:
+                    F = (gravitationalConstant * self.mass * particle.mass) / (r ** 2)
                     forceX = F * (dx / r)
                     forceY = F * (dy / r)
                     totalForceX += forceX
                     totalForceY += forceY
 
-        self.velocityX += totalForceX
-        self.velocityY += totalForceY
+        self.velocityX += (totalForceX / self.mass) * dt
+        self.velocityY += (totalForceY / self.mass) * dt
 
     def move(self):
         self.body.centerX += self.velocityX
@@ -92,7 +92,7 @@ def onMouseRelease(mouseX, mouseY):
 def onStep():
     global particles, heldParticles, isMouseDown
     for particle in particles:
-        particle.calculateForce(particles)
+        particle.calculateForce(particles, 1)
         
     particles = [p for p in particles if p.move()]
     
