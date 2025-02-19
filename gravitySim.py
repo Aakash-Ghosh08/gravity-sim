@@ -12,6 +12,7 @@ app.height -= 55
 isMouseDown = False
 xMouse = 0
 yMouse = 0
+particleCountLabel = Label(0,50,50,size=50)
 
 def distance(x1, y1, x2, y2):
     return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
@@ -32,7 +33,7 @@ class Particle:
         totalForceX, totalForceY = 0, 0
         
         for particle in particles:
-            if particle is not self:
+            if particle is not self and not self.body.hitsShape(particle.body):
                 dx = particle.body.centerX - self.body.centerX
                 dy = particle.body.centerY - self.body.centerY
                 r = math.sqrt(dx ** 2 + dy ** 2)
@@ -48,41 +49,32 @@ class Particle:
         self.velocityY += (totalForceY / self.mass) * dt
 
     def move(self):
+        global particleCountLabel
         self.body.centerX += self.velocityX
         self.body.centerY += self.velocityY
         if not (0 <= self.body.centerX <= app.width and 0 <= self.body.centerY <= app.height):
             self.body.visible = False
+            particleCountLabel.value -= 1
             return False
         return True
                     
     def moveApartIfTouching(self, particles):
-        """
-        Handle collisions between particles with perfect conservation of momentum.
-        
-        Args:
-            particles: List of particle objects to check collisions against
-        """
         for particle in particles:
-            # Skip self-collision and check for actual collision
             if self is particle or not self.body.hitsShape(particle.body):
                 continue
-                
-            # Calculate center-to-center vector
+
             dx = particle.body.centerX - self.body.centerX
             dy = particle.body.centerY - self.body.centerY
             distance = math.sqrt(dx * dx + dy * dy)
             
-            # Normalize the direction vector
-            if distance < 0.0001:  # Handle edge case of perfectly overlapping particles
+            if distance < 0.0001:
                 dx, dy = 1, 0
                 distance = 0.0001
             else:
                 dx, dy = dx/distance, dy/distance
-                
-            # Calculate overlap and separate particles
+
             overlap = (self.body.radius + particle.body.radius - distance)
             if overlap > 0:
-                # Move particles apart just enough to prevent overlap
                 moveX = dx * overlap * 0.5
                 moveY = dy * overlap * 0.5
                 
@@ -90,13 +82,10 @@ class Particle:
                 self.body.centerY -= moveY
                 particle.body.centerX += moveX
                 particle.body.centerY += moveY
-                
-                # Simply average the velocities - perfect conservation of momentum
-                # assuming equal mass particles
+
                 avgVelX = (self.velocityX + particle.velocityX) * 0.5
                 avgVelY = (self.velocityY + particle.velocityY) * 0.5
-                
-                # Set both particles to the average velocity - no damping
+
                 self.velocityX = avgVelX
                 self.velocityY = avgVelY
                 particle.velocityX = avgVelX
@@ -118,7 +107,7 @@ def onMouseRelease(mouseX, mouseY):
     isMouseDown = False
 
 def onStep():
-    global particles, heldParticles, isMouseDown
+    global particles, heldParticles, isMouseDown, particleCountLabel
     for particle in particles:
         particle.calculateForce(particles, 1)
         
@@ -146,6 +135,7 @@ def onStep():
                 distanceFromMouse = distance(particle.body.centerX, particle.body.centerY, xMouse,yMouse)/10
                 particle.velocityX = math.cos(angle) * distanceFromMouse
                 particle.velocityY = math.sin(angle) * distanceFromMouse
+            particleCountLabel.value += 1
         else:
             newParticle.body.visible = False
             del newParticle
