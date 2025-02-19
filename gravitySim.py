@@ -25,7 +25,7 @@ class Particle:
         self.velocityX = 0
         self.velocityY = 0
         self.mass = mass
-        self.body = Circle(x, y, 2, fill='orange')
+        self.body = Circle(x, y, 4, fill='orange')
 
     def calculateForce(self, particles, dt):
         global gravitationalConstant
@@ -56,23 +56,51 @@ class Particle:
         return True
                     
     def moveApartIfTouching(self, particles):
+        """
+        Handle collisions between particles with perfect conservation of momentum.
+        
+        Args:
+            particles: List of particle objects to check collisions against
+        """
         for particle in particles:
-            if(self is not particle and self.body.hitsShape(particle.body)):
-                angle = math.radians(angleTo(self.body.centerX, self.body.centerY, particle.body.centerX, particle.body.centerY))
-                offset = (2 * self.body.radius - distance(self.body.centerX,self.body.centerY, particle.body.centerX,particle.body.centerY))/2
+            # Skip self-collision and check for actual collision
+            if self is particle or not self.body.hitsShape(particle.body):
+                continue
                 
-                self.body.centerX += offset * math.cos(angle)
-                self.body.centerY -= offset * math.sin(angle)
-                particle.body.centerX -= offset * math.cos(angle)
-                particle.body.centerY += offset * math.sin(angle)
+            # Calculate center-to-center vector
+            dx = particle.body.centerX - self.body.centerX
+            dy = particle.body.centerY - self.body.centerY
+            distance = math.sqrt(dx * dx + dy * dy)
+            
+            # Normalize the direction vector
+            if distance < 0.0001:  # Handle edge case of perfectly overlapping particles
+                dx, dy = 1, 0
+                distance = 0.0001
+            else:
+                dx, dy = dx/distance, dy/distance
                 
-                damping = .85
-                relativeVelocityX = self.velocityX - particle.velocityX
-                relativeVelocityY = self.velocityY - particle.velocityY
-                self.velocityX -= damping * relativeVelocityX
-                self.velocityY -= damping * relativeVelocityY
-                particle.velocityX += damping * relativeVelocityX
-                particle.velocityY += damping * relativeVelocityY
+            # Calculate overlap and separate particles
+            overlap = (self.body.radius + particle.body.radius - distance)
+            if overlap > 0:
+                # Move particles apart just enough to prevent overlap
+                moveX = dx * overlap * 0.5
+                moveY = dy * overlap * 0.5
+                
+                self.body.centerX -= moveX
+                self.body.centerY -= moveY
+                particle.body.centerX += moveX
+                particle.body.centerY += moveY
+                
+                # Simply average the velocities - perfect conservation of momentum
+                # assuming equal mass particles
+                avgVelX = (self.velocityX + particle.velocityX) * 0.5
+                avgVelY = (self.velocityY + particle.velocityY) * 0.5
+                
+                # Set both particles to the average velocity - no damping
+                self.velocityX = avgVelX
+                self.velocityY = avgVelY
+                particle.velocityX = avgVelX
+                particle.velocityY = avgVelY
                 
 def onMouseDrag(mouseX, mouseY):
     global xMouse,yMouse,isMouseDown
