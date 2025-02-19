@@ -4,7 +4,7 @@ import pyautogui
 
 # Constants
 gravitationalConstant = 20
-mass = 1
+mass = 2
 particles = set()
 heldParticles = set()
 app.width, app.height = pyautogui.size()
@@ -47,6 +47,7 @@ class Particle:
         self.velocityY += (totalForceY / self.mass) * dt
 
     def move(self):
+        global particleCountLabel
         self.body.centerX += self.velocityX
         self.body.centerY += self.velocityY
 
@@ -104,6 +105,8 @@ def onMouseRelease(mouseX, mouseY):
 def onStep():
     global particles, heldParticles, isMouseDown, particleCountLabel
     
+    particleCountLabel.value = len(particles) + len(heldParticles)
+    
     for particle in particles:
         particle.calculateForce(1)
     
@@ -125,7 +128,6 @@ def onStep():
                 distFactor = math.sqrt(distanceSquared(p.body.centerX, p.body.centerY, xMouse, yMouse)) / 10
                 p.velocityX = math.cos(angle) * distFactor
                 p.velocityY = math.sin(angle) * distFactor
-            particleCountLabel.value += 1
         else:
             newParticle.body.visible = False
             del newParticle
