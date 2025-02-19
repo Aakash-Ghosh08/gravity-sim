@@ -5,75 +5,73 @@ import pyautogui
 # Constants
 gravitationalConstant = 20
 mass = 1
-heldParticles = []
-particles = []
+particles = set()
+heldParticles = set()
 app.width, app.height = pyautogui.size()
 app.height -= 55
 isMouseDown = False
-xMouse = 0
-yMouse = 0
-particleCountLabel = Label(0,50,50,size=50)
+xMouse = yMouse = 0
+particleCountLabel = Label(0, 50, 50, size=50)
 
-def distance(x1, y1, x2, y2):
-    return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+def distanceSquared(x1, y1, x2, y2):
+    dx, dy = x2 - x1, y2 - y1
+    return dx * dx + dy * dy
 
 def angleTo(x1, y1, x2, y2):
-    return math.degrees(math.atan2(y2 - y1, x2 - x1))
+    return math.atan2(y2 - y1, x2 - x1)
 
 class Particle:
     def __init__(self, x, y):
-        global mass
-        self.velocityX = 0
-        self.velocityY = 0
-        self.mass = mass
+        self.velocityX = self.velocityY = 0
         self.body = Circle(x, y, 4, fill='orange')
+        self.mass = mass
 
-    def calculateForce(self, particles, dt):
-        global gravitationalConstant
-        totalForceX, totalForceY = 0, 0
+    def calculateForce(self, dt):
+        totalForceX = totalForceY = 0
         
         for particle in particles:
-            if particle is not self and not self.body.hitsShape(particle.body):
-                dx = particle.body.centerX - self.body.centerX
-                dy = particle.body.centerY - self.body.centerY
-                r = math.sqrt(dx ** 2 + dy ** 2)
-                
-                if r > 0.5:
-                    F = (gravitationalConstant * self.mass * particle.mass) / (r ** 2)
-                    forceX = F * (dx / r)
-                    forceY = F * (dy / r)
-                    totalForceX += forceX
-                    totalForceY += forceY
+            if self is particle or self.body.hitsShape(particle.body):
+                continue
+            
+            dx = particle.body.centerX - self.body.centerX
+            dy = particle.body.centerY - self.body.centerY
+            r2 = dx * dx + dy * dy
+            
+            if r2 > 0.25:  # Avoid division by near-zero values
+                r = math.sqrt(r2)
+                F = (gravitationalConstant * self.mass * particle.mass) / r2
+                totalForceX += F * (dx / r)
+                totalForceY += F * (dy / r)
 
         self.velocityX += (totalForceX / self.mass) * dt
         self.velocityY += (totalForceY / self.mass) * dt
 
     def move(self):
-        global particleCountLabel
         self.body.centerX += self.velocityX
         self.body.centerY += self.velocityY
+
         if not (0 <= self.body.centerX <= app.width and 0 <= self.body.centerY <= app.height):
             self.body.visible = False
-            particleCountLabel.value -= 1
             return False
         return True
-                    
-    def moveApartIfTouching(self, particles):
+
+    def resolveCollisions(self):
         for particle in particles:
             if self is particle or not self.body.hitsShape(particle.body):
                 continue
-
+            
             dx = particle.body.centerX - self.body.centerX
             dy = particle.body.centerY - self.body.centerY
-            distance = math.sqrt(dx * dx + dy * dy)
+            r2 = dx * dx + dy * dy
             
-            if distance < 0.0001:
-                dx, dy = 1, 0
-                distance = 0.0001
+            if r2 > 0.0001:
+                r = math.sqrt(r2)
+                dx, dy = dx / r, dy / r
             else:
-                dx, dy = dx/distance, dy/distance
-
-            overlap = (self.body.radius + particle.body.radius - distance)
+                dx, dy = 1, 0
+                r = 0.0001
+            
+            overlap = (self.body.radius + particle.body.radius) - r
             if overlap > 0:
                 moveX = dx * overlap * 0.5
                 moveY = dy * overlap * 0.5
@@ -82,59 +80,51 @@ class Particle:
                 self.body.centerY -= moveY
                 particle.body.centerX += moveX
                 particle.body.centerY += moveY
-
+                
                 avgVelX = (self.velocityX + particle.velocityX) * 0.5
                 avgVelY = (self.velocityY + particle.velocityY) * 0.5
+                self.velocityX = particle.velocityX = avgVelX
+                self.velocityY = particle.velocityY = avgVelY
 
-                self.velocityX = avgVelX
-                self.velocityY = avgVelY
-                particle.velocityX = avgVelX
-                particle.velocityY = avgVelY
-                
 def onMouseDrag(mouseX, mouseY):
-    global xMouse,yMouse,isMouseDown
-    xMouse,yMouse = mouseX,mouseY
+    global xMouse, yMouse
+    xMouse, yMouse = mouseX, mouseY
 
-def onMousePress(mouseX,mouseY):
-    global xMouse,yMouse, isMouseDown
-    xMouse,yMouse = mouseX,mouseY
+def onMousePress(mouseX, mouseY):
+    global xMouse, yMouse, isMouseDown
+    xMouse, yMouse = mouseX, mouseY
     isMouseDown = True
 
 def onMouseRelease(mouseX, mouseY):
     global particles, heldParticles, isMouseDown
-    particles.extend(heldParticles)
+    particles.update(heldParticles)
     heldParticles.clear()
     isMouseDown = False
 
 def onStep():
     global particles, heldParticles, isMouseDown, particleCountLabel
-    for particle in particles:
-        particle.calculateForce(particles, 1)
-        
-    particles = [p for p in particles if p.move()]
     
     for particle in particles:
-        particle.moveApartIfTouching(particles)
-        
+        particle.calculateForce(1)
+    
+    particles = {p for p in particles if p.move()}
+    
+    for particle in particles:
+        particle.resolveCollisions()
+    
     for particle in heldParticles:
         particle.move()
-        particle.moveApartIfTouching(heldParticles)
+        particle.resolveCollisions()
     
-    if(isMouseDown):
+    if isMouseDown:
         newParticle = Particle(xMouse, yMouse)
-        hitsParticle = False
-        for particle in heldParticles:
-            if(newParticle.body.hitsShape(particle.body)):
-                hitsParticle = True
-                
-        if(not hitsParticle):
-            heldParticles.append(newParticle)
-
-            for particle in heldParticles:
-                angle = math.radians(angleTo(particle.body.centerX, particle.body.centerY, xMouse,yMouse))
-                distanceFromMouse = distance(particle.body.centerX, particle.body.centerY, xMouse,yMouse)/10
-                particle.velocityX = math.cos(angle) * distanceFromMouse
-                particle.velocityY = math.sin(angle) * distanceFromMouse
+        if all(not newParticle.body.hitsShape(p.body) for p in heldParticles):
+            heldParticles.add(newParticle)
+            for p in heldParticles:
+                angle = angleTo(p.body.centerX, p.body.centerY, xMouse, yMouse)
+                distFactor = math.sqrt(distanceSquared(p.body.centerX, p.body.centerY, xMouse, yMouse)) / 10
+                p.velocityX = math.cos(angle) * distFactor
+                p.velocityY = math.sin(angle) * distFactor
             particleCountLabel.value += 1
         else:
             newParticle.body.visible = False
