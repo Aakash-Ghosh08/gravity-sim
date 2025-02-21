@@ -12,6 +12,7 @@ app.height -= 55
 isMouseDown = False
 xMouse = yMouse = 0
 particleCountLabel = Label(0, 50, 50, size=50)
+maxForce = 0
 
 def distanceSquared(x1, y1, x2, y2):
     dx, dy = x2 - x1, y2 - y1
@@ -23,7 +24,7 @@ def angleTo(x1, y1, x2, y2):
 class Particle:
     def __init__(self, x, y):
         self.velocityX = self.velocityY = 0
-        self.body = Circle(x, y, 4, fill='orange')
+        self.body = Circle(x, y, 4, fill=rgb(0,0,255))
         self.mass = mass
 
     def calculateForce(self, dt):
@@ -37,7 +38,7 @@ class Particle:
             dy = particle.body.centerY - self.body.centerY
             r2 = dx * dx + dy * dy
             
-            if r2 > 0.25:  # Avoid division by near-zero values
+            if r2 > 0.25:
                 r = math.sqrt(r2)
                 F = (gravitationalConstant * self.mass * particle.mass) / r2
                 totalForceX += F * (dx / r)
@@ -45,6 +46,21 @@ class Particle:
 
         self.velocityX += (totalForceX / self.mass) * dt
         self.velocityY += (totalForceY / self.mass) * dt
+        
+        F = math.sqrt(totalForceX ** 2 + totalForceY ** 2)
+        F_max = 30
+        F_scaled = (math.log(F + 1) / math.log(F_max + 1)) * 30  
+
+        if F_scaled < 6:
+            self.body.fill = rgb(0, int(F_scaled * 255 / 6), 255)
+        elif F_scaled < 12:
+            self.body.fill = rgb(0, 255, int(255 - (F_scaled - 6) * 255 / 6))
+        elif F_scaled < 18:
+            self.body.fill = rgb(int((F_scaled - 12) * 255 / 6), 255, 0)
+        elif F_scaled < 24:
+            self.body.fill = rgb(255, int(255 - (F_scaled - 18) * 255 / 6), 0)
+        elif F_scaled <= 30:
+            self.body.fill = rgb(255, max(0, int((30 - F_scaled) * 255 / 6)), 0)
 
     def move(self):
         global particleCountLabel
