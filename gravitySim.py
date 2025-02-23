@@ -3,16 +3,17 @@ import math
 import pyautogui
 
 # Constants
-gravitationalConstant = 20
+gravitationalConstant = 1
 mass = 2
 particles = set()
 heldParticles = set()
 app.width, app.height = pyautogui.size()
-app.height -= 55
+#app.height -= 55
 isMouseDown = False
 xMouse = yMouse = 0
-particleCountLabel = Label(0, 50, 50, size=50)
+particleCountLabel = Label(0, 50, 50, size=50, fill = "white")
 maxForce = 0
+app.background = "black"
 
 def distanceSquared(x1, y1, x2, y2):
     dx, dy = x2 - x1, y2 - y1
