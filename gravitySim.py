@@ -3,7 +3,7 @@ import math
 import pyautogui
 
 # Constants
-gravitationalConstant = 1
+gravitationalConstant = 20
 mass = 2
 particles = set()
 heldParticles = set()
