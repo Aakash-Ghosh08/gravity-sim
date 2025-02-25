@@ -117,6 +117,22 @@ def onMouseRelease(mouseX, mouseY):
     particles.update(heldParticles)
     heldParticles.clear()
     isMouseDown = False
+    
+def onKeyHold(keys):
+    global particles
+    panSpeed = 2
+    if("up" in keys):
+        for particle in particles:
+            particle.body.centerY += panSpeed
+    elif("down" in keys):
+        for particle in particles:
+            particle.body.centerY -= panSpeed
+    if("right" in keys):
+        for particle in particles:
+            particle.body.centerX -= panSpeed
+    elif("left" in keys):
+        for particle in particles:
+            particle.body.centerX += panSpeed          
 
 def onStep():
     global particles, heldParticles, isMouseDown, particleCountLabel
