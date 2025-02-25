@@ -8,7 +8,6 @@ mass = 2
 particles = set()
 heldParticles = set()
 app.width, app.height = pyautogui.size()
-#app.height -= 55
 isMouseDown = False
 xMouse = yMouse = 0
 particleCountLabel = Label(0, 50, 50, size=50, fill = "white")
